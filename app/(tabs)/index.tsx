@@ -6,17 +6,38 @@ import { icons } from "@/constants/icons";
 import images from "@/constants/images";
 import "@/global.css";
 import { formatCurrency } from "@/lib/utils";
+import { useUser } from "@clerk/expo";
 import dayjs from "dayjs";
 import { styled } from "nativewind";
-import { useState } from "react";
-import { FlatList, Image, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { FlatList, Image, Pressable, Text, View } from "react-native";
+import { Link } from "expo-router";
 
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 
 const SafeAreaView = styled(RNSafeAreaView);
 export default function App() {
+  const { user } = useUser();
 
   const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | null>(null);
+
+  const displayName = useMemo(() => {
+    const firstName = user?.firstName?.trim();
+    const lastName = user?.lastName?.trim();
+    const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+    if (fullName) return fullName;
+    return null;
+  }, [user?.firstName, user?.lastName]);
+
+  const displayEmail = useMemo(() => {
+    return user?.primaryEmailAddress?.emailAddress ?? null;
+  }, [user?.primaryEmailAddress?.emailAddress]);
+
+  const avatarSource = useMemo(() => {
+    if (user?.imageUrl) return { uri: user.imageUrl };
+    return images.avatar;
+  }, [user?.imageUrl]);
+
   return (
     <SafeAreaView className="flex-1 bg-background p-4">
         <FlatList
@@ -24,8 +45,24 @@ export default function App() {
             <>
               <View className="home-header">
                 <View className="home-user">
-                  <Image source={images.avatar} className="home-avatar" />
-                  <Text className="home-user-name">{HOME_USER.name}</Text>
+                  <Image source={avatarSource} className="home-avatar" />
+                  <View className="ml-4 min-w-0 flex-1">
+                    <Text className="text-2xl font-sans-bold text-primary" numberOfLines={1}>
+                      {displayName ?? displayEmail ?? HOME_USER.name}
+                    </Text>
+                    {!displayName && !!displayEmail && (
+                      <View className="mt-1 flex-row flex-wrap items-center gap-1">
+                        <Text className="text-xs font-sans-medium text-muted-foreground">
+                          Complete your profile in
+                        </Text>
+                        <Link href="/settings" asChild>
+                          <Pressable>
+                            <Text className="text-xs font-sans-bold text-accent">Settings</Text>
+                          </Pressable>
+                        </Link>
+                      </View>
+                    )}
+                  </View>
                 </View>
 
                 <Image source={icons.add} className="home-add-icon" />
